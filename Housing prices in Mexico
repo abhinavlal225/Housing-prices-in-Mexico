@@ -1,0 +1,53 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
+
+# --- 1. Load Raw DataFrames ---
+# Ensure these files are in a 'data/' folder relative to this script
+try:
+    df1 = pd.read_csv("data/brasil-real-estate-1.csv")
+    df2 = pd.read_csv("data/brasil-real-estate-2.csv")
+except FileNotFoundError:
+    print("Error: CSV files not found in the 'data/' directory.")
+
+# --- 2. Clean and Transform df1 ---
+df1.dropna(inplace=True)
+
+# Split 'lat-lon' into separate numeric columns
+df1[['lat', 'lon']] = df1['lat-lon'].str.split(',', expand=True).astype(float)
+
+# Extract state names from the parent names column
+df1['state'] = df1['place_with_parent_names'].str.extract(r'\|Brasil\|([^|]+)')
+
+# Clean price column: remove $ and commas, then convert to float
+df1['price_usd'] = df1['price_usd'].replace(r'[\$,]', '', regex=True).astype(float)
+
+# Drop original combined columns
+df1.drop(columns=['lat-lon', 'place_with_parent_names'], inplace=True)
+
+
+# --- 3. Clean and Transform df2 ---
+# Currency conversion (using exchange rate from original analysis)
+exchange_rate = 3.19 
+df2["price_usd"] = df2["price_brl"] / exchange_rate
+
+df2 = df2.drop(columns=["price_brl"])
+df2 = df2.dropna()
+
+# Apply same splits and extractions as df1
+df2[['lat', 'lon']] = df2['lat-lon'].str.split(',', expand=True).astype(float)
+df2['state'] = df2['place_with_parent_names'].str.extract(r'\|Brasil\|([^|]+)')
+df2.drop(columns=['lat-lon', 'place_with_parent_names'], inplace=True)
+
+
+# --- 4. Concatenate and Explore ---
+# Merge both cleaned datasets into one master dataframe
+df = pd.concat([df1, df2])
+
+# Preview the final dataset
+print("Cleaning complete. Dataframe head:")
+print(df.head())
+
+# Example Summary Info
+print("\nDataFrame Info:")
+print(df.info())
